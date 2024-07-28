@@ -1,0 +1,54 @@
+---
+title: "Models"
+author: "Alex"
+format: html
+execute: 
+  echo: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| message: FALSE
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(gtsummary)
+
+```
+
+Summary:
+We seek to know what proportion of all votes will be cast for Joe Biden in the 2024 election. To answer this question we utilize data from the YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024. The assumption of representativeness might not be true when using data from this poll because the people who were sampled might be systematically different than the people who were not.We modeled biden_i, a binary TRUE/FALSE variable.
+
+$$ biden_i =  \mu + \epsilon_i $$
+```{r}
+#| label: model 
+#| cache: true
+poll_data <- tibble(biden = c(rep(1, 655), 
+                              rep(0, 904)))
+
+
+fit_bern <- brm(formula = biden ~ 1,
+    data = poll_data,
+    family = bernoulli(),
+    refresh = 0,
+    silent = 2,
+    seed = 9)
+```
+
+```{r}
+newdata <- tibble(.rows = 1)
+ndata <- newdata
+
+fit_bern |> 
+  add_epred_draws(newdata = ndata) |> 
+  select(.epred) |>
+  ggplot(aes(x = .epred))+
+  geom_density(aes(y = after_stat(count / sum(count))))+
+  scale_x_continuous(labels = scales::percent_format())+
+  scale_y_continuous(labels = scales::percent_format())+
+  labs(title = "Posterior Distribution for p",
+       subtitles = "There is a 95% chance for a value between 40% and 45%",
+      x = "Proportion, p, of votes for Biden", y = "Probability")
+```
+
